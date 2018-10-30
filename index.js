@@ -9,6 +9,18 @@ socket.on('message', data => {
   appendNewMsg(data)
 })
 
+socket.on('joined', room => {
+  document.getElementById(`join-${room}`).style.display = 'none'
+  document.getElementById(`leave-${room}`).style.display = 'inline-block'
+})
+
+socket.on('leaved', room => {
+  document.getElementById(`leave-${room}`).style.display = 'none'
+  document.getElementById(`join-${room}`).style.display = 'inline-block'
+})
+
+
+
 // 列表list，输入框content，按钮sendBtn
 let list = document.getElementById('list'),
   input = document.getElementById('input'),
@@ -59,5 +71,14 @@ function privateChat(e) {
     input.value = `@${user} `
   }
 }
+
+function join(room) {
+  socket.emit('join', room)
+}
+
+function leave (room) {
+  socket.emit('leave', room)
+}
+
 
 list.onclick = e => privateChat(e)

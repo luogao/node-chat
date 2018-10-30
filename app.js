@@ -6,6 +6,7 @@ const io = require('socket.io')(server);
 
 const SYSTEM = 'System'
 const socketObj = {}
+const mySocket = {}
 const userColor = ['#00a1f4', '#0cc', '#f44336', '#795548', '#e91e63', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#ffc107', '#607d8b', '#ff9800', '#ff5722']
 
 console.log("\33[2J")
@@ -17,6 +18,8 @@ io.on('connection', socket => {
 	// 监听客户端的消息
 	let username
 	let color
+	let rooms = []
+	mySocket[socket.id] = socket
 
 	socket.on('message', msg => {
 
@@ -44,6 +47,9 @@ io.on('connection', socket => {
 					})
 				}
 			} else {
+
+
+				
 				// 就向所有人广播
 				io.emit('message', {
 					user: username,
@@ -72,6 +78,42 @@ io.on('connection', socket => {
 		}
 
 	});
+
+	socket.on('join', room => {
+		// 判断一下用户是否进入了房间，如果没有就让其进入房间内
+		if (username && rooms.indexOf(room) === -1) {
+			// socket.join表示进入某个房间
+			socket.join(room)
+			rooms.push(room)
+			// 这里发送个joined事件，让前端监听后，控制房间按钮显隐
+			socket.emit('joined', room)
+			socket.send({
+				user: SYSTEM,
+				color,
+				content: `你已加入${room}战队`,
+				createAt
+			})
+		}
+	})
+
+	socket.on('leave', room => {
+		// index为该房间在数组rooms中的索引，方便删除
+		let index = rooms.indexOf(room)
+		if (index !== -1) {
+			socket.leave(room); // 离开该房间
+			rooms.splice(index, 1); // 删掉该房间
+			// 这里发送个leaved事件，让前端监听后，控制房间按钮显隐
+			socket.emit('leaved', room);
+			// 通知一下自己
+			socket.send({
+				user: SYSTEM,
+				color,
+				content: `你已离开${room}战队`,
+				createAt
+			});
+		}
+
+	})
 
 
 });
