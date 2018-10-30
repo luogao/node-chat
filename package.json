@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "my first socket.io app",
   "dependencies": {
-    "bootstrap": "^3.3.7",
+    "bootstrap": ">=4.1.2",
     "express": "^4.10.2",
     "socket.io": "^2.0.3"
   }

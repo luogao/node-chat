@@ -2,48 +2,52 @@
 <html>
 
 <head>
-    <title>Socket.IO chat</title>
-    <link rel="stylesheet" href="index.css">
-    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <title>Socket.IO chat</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
 </head>
 
 <body>
-    <div id="wrapper">
-        <div class="container">
-            <span>Online Users:</span><span class="userCounter label label-info"></span>
-            <button class="gotoRoom1 btn btn-warning">Room1</button>
-            <div class="col-md-12 chatBody center-block plr0">
-                <div class="col-md-12 contentBody">
-                    <ul id="messages"></ul>
-                </div>
-                <form action="" class="col-md-12 chatAction">
-                    <div class="form-group">
-                        <input class="form-control" id="m" autocomplete="off" />
-                        <button class="btn btn-info">Send</button>
-                    </div>
-                </form>
-            </div>
-            <div class="clearfix"></div>
+  <div id="wrapper">
+    <div class="container">
+      <span>Online Users:</span><span class="userCounter label label-info"></span>
+      <button class="gotoRoom1 btn btn-warning">Room1</button>
+      <div class="col-md-12 chatBody center-block plr0">
+        <div class="col-md-12 contentBody">
+          <ul id="messages"></ul>
         </div>
+        <form action="" class="col-md-12 chatAction">
+          <div class="form-group">
+            <input class="form-control" id="m" autocomplete="off" />
+            <button class="btn btn-info">Send</button>
+          </div>
+        </form>
+      </div>
+      <div class="clearfix"></div>
     </div>
-    <script src="http://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-    <script>
-    var socket = io();
-    $('form').submit(function() {
-        socket.emit('chat message', $('#m').val());
-        $('#m').val('');
-        return false;
+  </div>
+  <script src="http://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+    crossorigin="anonymous"></script>
+  <script src="./socket.io.js"></script>
+  <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script>
+    var socket = io('/');
+    $('form').submit(function () {
+      socket.emit('message', $('#m').val());
+      $('#m').val('');
+      return false;
     });
-    socket.on('chat message', function(msg) {
-        $('#messages').append($('<li>').text(msg));
+    socket.on('message', function (msg) {
+      $('#messages').append($('<li>').text(msg));
     });
-    socket.on('users', function(msg) {
-        $('.userCounter').text(msg.number);
+    socket.on('disconnect', () => {
+      console.log('连接断开成功')
+    })
+    socket.on('users', function (msg) {
+      $('.userCounter').text(msg.number);
     });
-    
-    </script>
+
+  </script>
 </body>
 
 </html>
