@@ -23,10 +23,10 @@ function appendNewMsg(msgData) {
   li.className = 'list-group-item'
   li.innerHTML = `
     <p style='color:#ccc'>
-      <span class='user'>${msgData.user}</span>
+      <span class='user' style='color: ${msgData.color}'>${msgData.user}</span>
       ${msgData.createAt}
     </p>
-    <p class='content'>${msgData.content}</p>
+    <p class='content' style='background: ${msgData.color}'>${msgData.content}</p>
   `
   list.appendChild(li)
   list.scrollTop = list.scrollHeight
