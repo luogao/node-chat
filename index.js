@@ -11,17 +11,42 @@ socket.on('message', data => {
 })
 
 socket.on('joined', room => {
-  document.getElementById(`join-${room}`).style.display = 'none'
-  document.getElementById(`leave-${room}`).style.display = 'inline-block'
+  handleJoinRoom(room)
 })
 
 socket.on('leaved', room => {
-  document.getElementById(`leave-${room}`).style.display = 'none'
-  document.getElementById(`join-${room}`).style.display = 'inline-block'
+  handleLeaveRoom(room)
 })
 
 socket.on('history', history => {
-  console.log(111)
+  handleHistoryMsg(history)
+})
+
+
+// 列表list，输入框content，按钮sendBtn
+let list = document.getElementById('list'),
+  input = document.getElementById('input'),
+  sendBtn = document.getElementById('sendBtn');
+
+// 点击按钮发消息
+sendBtn.onclick = send
+// 回车发消息
+input.onkeydown = (event) => enterSend(event)
+// 私聊
+list.onclick = e => privateChat(e)
+
+
+function handleJoinRoom(room) {
+  document.getElementById(`join-${room}`).style.display = 'none'
+  document.getElementById(`leave-${room}`).style.display = 'inline-block'
+}
+
+function handleLeaveRoom(room) {
+  document.getElementById(`leave-${room}`).style.display = 'none'
+  document.getElementById(`join-${room}`).style.display = 'inline-block'
+}
+
+function handleHistoryMsg(history) {
   let html = history.map(data => {
     return `
     <li class="list-group-item">
@@ -32,18 +57,7 @@ socket.on('history', history => {
   }).join('')
   list.innerHTML = html + '<li style="margin: 16px 0;text-align: center">以上是历史消息</li>'
   list.scrollTop = list.scrollHeight
-})
-
-
-
-// 列表list，输入框content，按钮sendBtn
-let list = document.getElementById('list'),
-  input = document.getElementById('input'),
-  sendBtn = document.getElementById('sendBtn');
-
-sendBtn.onclick = send
-input.onkeydown = (event) => enterSend(event)
-
+}
 
 function appendNewMsg(msgData) {
   const li = document.createElement('li')
@@ -78,12 +92,11 @@ function enterSend(event) {
 
 function privateChat(e) {
   const target = event.target
-
   const user = target.innerHTML
-
   if (target.className === 'user') {
     // 将@用户名显示在input输入框中
     input.value = `@${user} `
+    input.focus()
   }
 }
 
@@ -95,5 +108,3 @@ function leave(room) {
   socket.emit('leave', room)
 }
 
-
-list.onclick = e => privateChat(e)

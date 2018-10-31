@@ -1,8 +1,11 @@
+const nanoid = require('nanoid')
 const express = require('express')
 const app = express();
 
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
+
+const { shuffle } =  require('./utils')
 
 const SYSTEM = 'System'
 const socketObj = {}
@@ -15,101 +18,111 @@ console.log("\33[2J")
 // 设置静态文件夹
 app.use(express.static(__dirname))
 
+class User {
+	constructor() {
+		this.name = nanoid(10)
+		this.color = shuffle(userColor)[0]
+	}
+}
+
+function handleUserConnected(socket, user) {
+	const createAt = new Date().toLocaleDateString()
+	// socket.broadcast.emit 向除了自己的所有人广播，毕竟进没进入自己是知道的，没必要跟自己再说一遍
+	socket.broadcast.emit('message', {
+		user: SYSTEM,
+		color: user.color,
+		content: `${user.name} 加入了聊天！`,
+		createAt
+	})
+	socketObj[user.name] = socket
+}
+
+
+function handlePrivateChat(options = {}) {
+	const { fromUser, content, toSocket, createAt } = options
+	if (toSocket) {
+		toSocket.send({
+			user: fromUser.name,
+			color: fromUser.color,
+			content,
+			createAt
+		})
+	}
+}
+
+function getRoomSockets(io, rooms) {
+	const socketJson = {}
+	rooms.forEach(room => {
+		// 取得进入房间内所对应的所有sockets的hash值，它便是拿到的socket.id
+		let roomSockets = io.sockets.adapter.rooms[room].sockets
+		Object.keys(roomSockets).forEach(socketId => {
+			if (!socketJson[socketId]) {
+				socketJson[socketId] = 1
+			}
+
+		})
+	})
+	return socketJson
+}
+
 io.on('connection', socket => {
+	const user = new User()
+	const username = user.name
+	const color = user.color
+	const rooms = []
+
 	// 监听客户端的消息
-	let username
-	let color
-	let rooms = []
+	handleUserConnected(socket, user)
 
 	mySocket[socket.id] = socket
 
 	socket.on('message', msg => {
 
 		const createAt = new Date().toLocaleDateString()
-		if (username) {
-			// 正则判断消息是否为私聊专属
-			const private = msg.match(/@([^ ]+) (.+)/)
+		// 正则判断消息是否为私聊专属
+		const private = msg.match(/@([^ ]+) (.+)/)
 
-			if (private) {
-				// 私聊的用户，正则匹配的第一个分组
-				let toUser = private[1]
+		if (private) {
+			// 私聊的用户，正则匹配的第一个分组
+			let toUser = private[1]
+			// 私聊的内容，正则匹配的第二个分组
+			let content = private[2]
+			// 从socketObj中获取私聊用户的socket
+			let toSocket = socketObj[toUser]
 
-				// 私聊的内容，正则匹配的第二个分组
-				let content = private[2]
-
-				// 从socketObj中获取私聊用户的socket
-				let toSocket = socketObj[toUser]
-
-				if (toSocket) {
-					toSocket.send({
-						user: username,
-						color,
-						content,
-						createAt
-					})
-				}
-			} else {
-
-				if (rooms.length) {
-					let socketJson = {}
-
-					rooms.forEach(room => {
-						// 取得进入房间内所对应的所有sockets的hash值，它便是拿到的socket.id
-						let roomSockets = io.sockets.adapter.rooms[room].sockets
-						Object.keys(roomSockets).forEach(socketId => {
-							console.log('socketId', socketId)
-
-							if (!socketJson[socketId]) {
-								socketJson[socketId] = 1
-							}
-
-						})
-					})
-
-					Object.keys(socketJson).forEach(socketId => {
-						mySocket[socketId].emit('message', {
-							user: username,
-							color,
-							content: msg,
-							createAt
-						})
-					})
-
-
-				} else {
-					// 如果不是私聊，向所有人广播
-					io.emit('message', {
+			handlePrivateChat({
+				fromUser: user,
+				content,
+				toSocket,
+				createAt
+			})
+		} else {
+			if (rooms.length) {
+				const socketJson = getRoomSockets(io, rooms)
+				Object.keys(socketJson).forEach(socketId => {
+					mySocket[socketId].emit('message', {
 						user: username,
 						color,
 						content: msg,
 						createAt
 					})
-					msgHistory.push({
-						user:username,
-						color,
-						content:msg,
-						createAt
-					})
-				}
+				})
+			} else {
+				// 如果不是私聊，向所有人广播
+				io.emit('message', {
+					user: username,
+					color,
+					content: msg,
+					createAt
+				})
+				msgHistory.push({
+					user: username,
+					color,
+					content: msg,
+					createAt
+				})
 			}
-		} else {
-
-			// 如果是第一次进入的话，就将输入的内容当做用户名
-			username = msg
-
-			color = shuffle(userColor)[0]
-			// socket.broadcast.emit 向除了自己的所有人广播，毕竟进没进入自己是知道的，没必要跟自己再说一遍
-			socket.broadcast.emit('message', {
-				user: SYSTEM,
-				color,
-				content: `${username} 加入了聊天！`,
-				createAt
-			})
-
-			socketObj[username] = socket
-
 		}
-
 	});
 
 	socket.on('join', room => {
@@ -147,7 +160,6 @@ io.on('connection', socket => {
 				createAt
 			});
 		}
-
 	})
 
 	socket.on('getHistory', () => {
@@ -164,19 +176,3 @@ io.on('connection', socket => {
 server.listen(4000, function () {
 	console.log('listening on:4000');
 });
-
-// 乱序排列方法，方便把数组打乱
-
-function shuffle(arr) {
-	let len = arr.length, random
-
-	while (0 !== len) {
-		// 右移位运算符向下取整
-		random = (Math.random() * len--) >>> 0;
-		// 解构赋值实现变量互换
-		[arr[len], arr[random]] = [arr[random], arr[len]]
-	}
-
-	return arr
-
-}
