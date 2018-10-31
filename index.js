@@ -3,6 +3,7 @@ const socket = io();
 // 监听与服务端的连接
 socket.on('connect', () => {
   console.log('连接成功');
+  socket.emit('getHistory')
 });
 
 socket.on('message', data => {
@@ -17,6 +18,20 @@ socket.on('joined', room => {
 socket.on('leaved', room => {
   document.getElementById(`leave-${room}`).style.display = 'none'
   document.getElementById(`join-${room}`).style.display = 'inline-block'
+})
+
+socket.on('history', history => {
+  console.log(111)
+  let html = history.map(data => {
+    return `
+    <li class="list-group-item">
+      <p style="color: #ccc;"><span class="user" style="color:${data.color}">${data.user} </span>${data.createAt}</p>
+      <p class="content" style="background-color: ${data.color}">${data.content}</p>
+    </li>
+    `
+  }).join('')
+  list.innerHTML = html + '<li style="margin: 16px 0;text-align: center">以上是历史消息</li>'
+  list.scrollTop = list.scrollHeight
 })
 
 
@@ -76,7 +91,7 @@ function join(room) {
   socket.emit('join', room)
 }
 
-function leave (room) {
+function leave(room) {
   socket.emit('leave', room)
 }
 

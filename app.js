@@ -8,6 +8,7 @@ const SYSTEM = 'System'
 const socketObj = {}
 const mySocket = {}
 const userColor = ['#00a1f4', '#0cc', '#f44336', '#795548', '#e91e63', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#ffc107', '#607d8b', '#ff9800', '#ff5722']
+const msgHistory = []
 
 console.log("\33[2J")
 
@@ -19,6 +20,7 @@ io.on('connection', socket => {
 	let username
 	let color
 	let rooms = []
+
 	mySocket[socket.id] = socket
 
 	socket.on('message', msg => {
@@ -48,17 +50,48 @@ io.on('connection', socket => {
 				}
 			} else {
 
+				if (rooms.length) {
+					let socketJson = {}
 
-				
-				// 就向所有人广播
-				io.emit('message', {
-					user: username,
-					color,
-					content: msg,
-					createAt
-				})
+					rooms.forEach(room => {
+						// 取得进入房间内所对应的所有sockets的hash值，它便是拿到的socket.id
+						let roomSockets = io.sockets.adapter.rooms[room].sockets
+						Object.keys(roomSockets).forEach(socketId => {
+							console.log('socketId', socketId)
+
+							if (!socketJson[socketId]) {
+								socketJson[socketId] = 1
+							}
+
+						})
+					})
+
+					Object.keys(socketJson).forEach(socketId => {
+						mySocket[socketId].emit('message', {
+							user: username,
+							color,
+							content: msg,
+							createAt
+						})
+					})
+
+
+				} else {
+					// 如果不是私聊，向所有人广播
+					io.emit('message', {
+						user: username,
+						color,
+						content: msg,
+						createAt
+					})
+					msgHistory.push({
+						user:username,
+						color,
+						content:msg,
+						createAt
+					})
+				}
 			}
-
 		} else {
 
 			// 如果是第一次进入的话，就将输入的内容当做用户名
@@ -80,6 +113,7 @@ io.on('connection', socket => {
 	});
 
 	socket.on('join', room => {
+		const createAt = new Date().toLocaleDateString()
 		// 判断一下用户是否进入了房间，如果没有就让其进入房间内
 		if (username && rooms.indexOf(room) === -1) {
 			// socket.join表示进入某个房间
@@ -97,6 +131,7 @@ io.on('connection', socket => {
 	})
 
 	socket.on('leave', room => {
+		const createAt = new Date().toLocaleDateString()
 		// index为该房间在数组rooms中的索引，方便删除
 		let index = rooms.indexOf(room)
 		if (index !== -1) {
@@ -115,6 +150,13 @@ io.on('connection', socket => {
 
 	})
 
+	socket.on('getHistory', () => {
+		// 通过数组的slice方法截取最新的20条消息
+		if (msgHistory.length) {
+			let history = msgHistory.slice(msgHistory.length - 20)
+			socket.emit('history', history)
+		}
+	})
 
 });
 
